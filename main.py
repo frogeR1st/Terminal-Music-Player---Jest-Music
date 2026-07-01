@@ -16,24 +16,96 @@ SongData: dict = {}
 # Constants
 WINDOW_SIZE: Vector = Vector(100, 40)
 
+LOG_PATH: str = "/home/User/.cache/badNam3/"
+LOG_FILENAME: str = "Log.txt"
+
 CONFIG_PATH: str = "/home/User/.config/badNam3/"
 CONFIG_FILENAME: str = "MusicPlayerConfig.json"
 CONFIG_DUMMY_DATA: dict = {"FPS": 24, "test": "working"}
 
-MUSIC_DATA_PATH: str = "/home/User/.config/badNam3/"
+MUSIC_DATA_PATH: str = "/home/User/.cache/badNam3/"
 MUSIC_DATA_FILENAME: str = "MusicData.json"
 MUSIC_DATA_DUMMY_DATA: dict = {}
+
+
+# Mini Functions
+def CreatePath(path: str) -> bool:
+    # Tests directiory and creates directory
+    try:
+        os.mkdir(path)
+        # AddToLog(f"Created Path {path}, returning True")
+        return True
+
+    except FileExistsError:
+        # AddToLog(f"Path {path} already exists, returning False")
+        return False
+
+
+def CreateFile(file: str):
+    f = open(file, "a")
+    f.close()
+    # AddToLog(f"Attempted to create file {file}, returning True")
+
+
+def getJSON(file: str) -> dict:
+    stringData: str = ""
+    dictData: dict = {}
+
+    f = open(file)
+    stringData = f.read()
+    f.close()
+
+    dictData = json.loads(stringData)
+
+    return dictData
+
+
+def setJSON(file: str, data: dict = {}) -> str:
+    stringData: str = ""
+
+    stringData = json.dumps(data)
+
+    f = open(file, "w")
+    f.write(stringData)
+    f.close()
+
+    return stringData
+
 
 # Startup
 # Log
 LogMessages: list[str] = []
+ShowingLog: bool = True
 
 
 def AddToLog(Message: str = ""):
     LogMessages.append(Message)
-    StdScr.addstr(len(LogMessages) - 1, 0, Message)
+
+    CreatePath(LOG_PATH)
+    CreateFile(LOG_PATH + LOG_FILENAME)
+
+    f = open(LOG_PATH + LOG_FILENAME, "a")
+    f.write(Message + "\n")
+    f.close()
+
+    if ShowingLog:
+        StdScr.addstr(len(LogMessages) - 1, 0, Message)
+        StdScr.refresh()
+
+
+def ShowLog():
+    StdScr.clear()
+    indx: int = 0
+    for Message in LogMessages:
+        StdScr.addstr(indx, 0, Message)
+        indx += 1
     StdScr.refresh()
 
+
+# Adds new session to log txt file
+f = open(LOG_PATH + LOG_FILENAME, "a")
+f.write("\n>-----New Session-----<\n\n")
+f.close()
 
 # Init
 StdScr = curses.initscr()
@@ -118,51 +190,9 @@ def _inputHandler():
     pass
 
 
-# Mini Functions
-def CreatePath(path: str) -> bool:
-    # Tests directiory and creates directory
-    try:
-        os.mkdir(path)
-        AddToLog(f"Created Path {path}, returning True")
-        return True
-
-    except FileExistsError:
-        AddToLog(f"Path {path} already exists, returning False")
-        return False
-
-
-def CreateFile(file: str):
-    f = open(file, "a")
-    f.close()
-    AddToLog(f"Created File {file}, returning True")
-
-
-def getJSON(file: str) -> dict:
-    stringData: str = ""
-    dictData: dict = {}
-
-    f = open(file)
-    stringData = f.read()
-    f.close()
-
-    dictData = json.loads(stringData)
-
-    return dictData
-
-
-def setJSON(file: str, data: dict = {}) -> str:
-    stringData: str = ""
-
-    stringData = json.dumps(data)
-
-    f = open(file, "w")
-    f.write(stringData)
-    f.close()
-
-    return stringData
-
-
 # Running Main Funtions
+
+
 _ready()
 _ElementHandler()
 _drawing()
