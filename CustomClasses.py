@@ -1,4 +1,5 @@
 from __future__ import annotations
+from contextlib import nullcontext
 import curses
 import random
 
@@ -53,26 +54,31 @@ class Vector:
         return f"∟{self.x}, {self.y}"
 
 
-class SongInformation:
-    def __init__(self, Name: str, Artist: str, Album: AlbumInformation):
-        self.Name = Name
-        self.Artist = Artist
-        self.Album = Album
+class MusicalInformation:
+    def __init__(self) -> None:
+        self.Name: str
+        self.Pin: bool = False
+        self.Rating: int = 0
 
 
-class AlbumInformation:
-    def __init__(self, Name: str, Artist: str, SongRoster: list[SongInformation] = []):
-        self.Name = Name
-        self.Artist = Artist
-        self.SongRoster = SongRoster
+class SongInformation(MusicalInformation):
+    def __init__(self):
+        self.Artist: AlbumInformation
+        self.Album: AlbumInformation
+
+
+class AlbumInformation(MusicalInformation):
+    def __init__(self):
+        self.Artist: AlbumInformation
+        self.Roster: list[AlbumInformation]
 
     def CreateSuffledCopy(self) -> AlbumInformation:
-        duplicate = AlbumInformation(Name=self.Name, Artist=self.Artist)
+        duplicate = AlbumInformation()
 
-        roster = self.SongRoster
-        random.shuffle(roster)
+        shuffledRoster = self.Roster
+        random.shuffle(shuffledRoster)
 
-        duplicate.SongRoster = roster
+        duplicate.Roster = shuffledRoster
 
         return duplicate
 

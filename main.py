@@ -21,7 +21,7 @@ LOG_FILENAME: str = "Log.txt"
 
 CONFIG_PATH: str = "/home/User/.config/badNam3/"
 CONFIG_FILENAME: str = "MusicPlayerConfig.json"
-CONFIG_DUMMY_DATA: dict = {"FPS": 24, "test": "working"}
+CONFIG_DUMMY_DATA: dict = {"MusicDirectory": "/home/User/Music/test"}
 
 MUSIC_DATA_PATH: str = "/home/User/.cache/badNam3/"
 MUSIC_DATA_FILENAME: str = "MusicData.json"
@@ -75,11 +75,14 @@ def setJSON(file: str, data: dict = {}) -> str:
 # Startup
 # Log
 LogMessages: list[str] = []
-ShowingLog: bool = True
+ShowingLog: bool = False
 
 
-def AddToLog(Message: str = ""):
+def AddToLog(Message):
+    Message = str(Message)
+
     LogMessages.append(Message)
+    Scroll: int = 1
 
     CreatePath(LOG_PATH)
     CreateFile(LOG_PATH + LOG_FILENAME)
@@ -88,9 +91,19 @@ def AddToLog(Message: str = ""):
     f.write(Message + "\n")
     f.close()
 
-    if ShowingLog:
-        StdScr.addstr(len(LogMessages) - 1, 0, Message)
-        StdScr.refresh()
+    if ShowingLog:  # Currently Broken, when there are too many messages, there is an error as you can't draw outside the terminal
+        if len(LogMessages) % 5 == 0:
+            StdScr.addstr(len(LogMessages) - Scroll, 50, "5th message")
+            Scroll = 0
+
+        try:
+            StdScr.addstr(len(LogMessages) - Scroll, 0, Message)
+            StdScr.refresh()
+        except Exception:
+            StdScr.addstr(
+                len(LogMessages) - Scroll, 0, "Message too long, see log file"
+            )
+            StdScr.refresh()
 
 
 def ShowLog():
@@ -178,6 +191,65 @@ def _ready():
     GetMusicData()
 
 
+def GatherFiles(directory: str) -> dict:
+    Files: dict = {}
+    Directories: list[str] = []
+
+    AddToLog(f"Testing Directory: {directory}")
+
+    for file in os.listdir(directory):
+        try:
+            if file[-4] == ".":
+                AddToLog(f"Found Song: {file}")
+                Files[file] = "Song"
+            else:
+                AddToLog(f"Found Directory: {file}")
+                Files[file] = {}
+                Directories.append(file)
+
+        except IndexError:
+            AddToLog(f"Found Directory: {file} - file too small")
+            Files[file] = {}
+            Directories.append(file)
+
+    for innerDirectory in Directories:
+        AddToLog("> Attempting to go deeper")
+        Files[innerDirectory] = GatherFiles(f"{directory}/{innerDirectory}")
+
+    return Files
+
+
+def _updateMusicData():
+    # Get files from directory
+    Files: dict = GatherFiles(Config["MusicDirectory"])
+
+    AddToLog(f"Finished Gathering Files, Tree: {Files}")
+
+    # for file in os.listdir(Config["MusicDirectory"]):
+    #    if file[-4] == ".":
+    #        Files[file] = "Song"
+    #    else:
+    #        Files[file] = {}
+
+    pass
+    # Directories = Artists
+    # Dsirectoryies in Directories = Albums/EP's
+    # Songs in Directories = Singles
+    # Songs in Directories in Directories = Songs
+    #
+    # Get all artists, albums, songs, from directory
+    # Get all artists, arbums, songs, from cache
+    #
+    # Remove none existant songs from cache
+    # Add new songs to cache
+    # Remove none existant artists from cache
+    # Add new artists to cache
+    # Remove none existant albums from cache
+    # Add new albums to cache
+    #
+    # try to add meta date to the songs, albums, artists, so you can rename and move songs
+
+
 def _ElementHandler():
     pass
 
@@ -191,9 +263,8 @@ def _inputHandler():
 
 
 # Running Main Funtions
-
-
 _ready()
+_updateMusicData()
 _ElementHandler()
 _drawing()
 _inputHandler()
