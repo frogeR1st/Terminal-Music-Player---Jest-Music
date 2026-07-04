@@ -60,6 +60,8 @@ class MusicalInformation:
         self.Pin: bool = False
         self.Rating: int = 0
 
+        self.Path: str = ""
+
 
 class SongInformation(MusicalInformation):
     def __init__(self):
@@ -70,7 +72,7 @@ class SongInformation(MusicalInformation):
 class AlbumInformation(MusicalInformation):
     def __init__(self):
         self.Artist: AlbumInformation
-        self.Roster: list[AlbumInformation]
+        self.Roster: list = []
 
     def CreateSuffledCopy(self) -> AlbumInformation:
         duplicate = AlbumInformation()

@@ -1,5 +1,5 @@
 # Classes
-from CustomClasses import AlbumInformation, SongInformation, Vector
+from CustomClasses import AlbumInformation, SongInformation, MusicalInformation, Vector
 
 # Packages
 import curses
@@ -7,6 +7,13 @@ import json
 import os
 
 # Variables
+# Music
+ArtistElements: list[AlbumInformation] = []
+AlbumElements: list[AlbumInformation] = []
+SongElements: list[SongInformation] = []
+
+AllElements: list = ArtistElements + AlbumElements + SongElements
+
 # Screen
 CurrentScreen: str = "loading"
 
@@ -29,6 +36,8 @@ MUSIC_DATA_DUMMY_DATA: dict = {}
 
 
 # Mini Functions
+
+
 def CreatePath(path: str) -> bool:
     # Tests directiory and creates directory
     try:
@@ -193,7 +202,10 @@ def _ready():
 
 def GatherFiles(directory: str) -> dict:
     Files: dict = {}
+    Songs: list[str] = []
+    SongsFull: list[str] = []
     Directories: list[str] = []
+    DirectoriesFull: list[str] = []
 
     AddToLog(f"Testing Directory: {directory}")
 
@@ -202,28 +214,106 @@ def GatherFiles(directory: str) -> dict:
             if file[-4] == ".":
                 AddToLog(f"Found Song: {file}")
                 Files[file] = "Song"
+                Songs.append(file)
+                SongsFull.append(f"{directory}/{file}")
             else:
                 AddToLog(f"Found Directory: {file}")
                 Files[file] = {}
                 Directories.append(file)
+                DirectoriesFull.append(f"{directory}/{file}")
 
         except IndexError:
             AddToLog(f"Found Directory: {file} - file too small")
             Files[file] = {}
             Directories.append(file)
+            DirectoriesFull.append(f"{directory}/{file}")
 
     for innerDirectory in Directories:
         AddToLog("> Attempting to go deeper")
-        Files[innerDirectory] = GatherFiles(f"{directory}/{innerDirectory}")
+        GatheredFiles: dict = GatherFiles(f"{directory}/{innerDirectory}")
 
-    return Files
+        Files[innerDirectory] = GatheredFiles["files"]
+        Songs = Songs + GatheredFiles["songs"]
+        SongsFull = SongsFull + GatheredFiles["songsFull"]
+        Directories = Directories + GatheredFiles["directories"]
+        DirectoriesFull = DirectoriesFull + GatheredFiles["directoriesFull"]
+
+    return {
+        "files": Files,
+        "songs": Songs,
+        "directories": Directories,
+        "songsFull": SongsFull,
+        "directoriesFull": DirectoriesFull,
+    }
+
+
+def GetAlbumElement(Name: str, From: list) -> AlbumInformation:
+    AddToLog(f"looking for: {Name}")
+    for element in From:
+        AddToLog(f"looking at: {element.Name}")
+        if element.Name == Name.strip(" "):
+            AddToLog(f"found: {element.Name}")
+            return element
+
+    raise ModuleNotFoundError
+
+
+def FilesIntoElements(Directories: list[str], SongDirectories: list[str]):
+    Directories = sorted(Directories, key=len)
+    SongDirectories = sorted(SongDirectories, key=len)
+
+    AddToLog(f"Dir: {Directories}")
+    AddToLog(f"songDir: {SongDirectories}")
+
+    for directory in Directories:
+        splitDir: list = directory.replace(Config["MusicDirectory"], "").split("/")
+        splitDir.pop(0)
+
+        element = AlbumInformation()
+        element.Name = splitDir[-1].strip(" ")
+        element.Path = directory
+
+        if len(splitDir) == 1:
+            # Artist
+            element.Artist = element
+            ArtistElements.append(element)
+        else:
+            # Album
+            Art: AlbumInformation = GetAlbumElement(splitDir[0], ArtistElements)
+            element.Artist = Art
+            AlbumElements.append(element)
+            Art.Roster.append(element)
+
+    for songDirectory in SongDirectories:
+        splitSongDir: list = songDirectory.replace(Config["MusicDirectory"], "").split(
+            "/"
+        )
+        splitSongDir.pop(0)
+
+        element = SongInformation()
+        element.Name = splitSongDir[-1].strip(" ")
+        element.Path = songDirectory
+
+        element.Artist = GetAlbumElement(splitSongDir[0], ArtistElements)
+
+        if splitSongDir[-2] == splitSongDir[0]:
+            element.Album = element.Artist
+        else:
+            element.Album = GetAlbumElement(splitSongDir[-2], AlbumElements)
+            element.Album.Roster.append(element)
+
+        SongElements.append(element)
 
 
 def _updateMusicData():
     # Get files from directory
     Files: dict = GatherFiles(Config["MusicDirectory"])
-
     AddToLog(f"Finished Gathering Files, Tree: {Files}")
+
+    FilesIntoElements(Files["directoriesFull"], Files["songsFull"])
+    AddToLog(f"Artists: {ArtistElements}")
+    AddToLog(f"Albums: {AlbumElements}")
+    AddToLog(f"Songs: {SongElements}")
 
     # for file in os.listdir(Config["MusicDirectory"]):
     #    if file[-4] == ".":
@@ -263,6 +353,7 @@ def _inputHandler():
 
 
 # Running Main Funtions
+
 _ready()
 _updateMusicData()
 _ElementHandler()
