@@ -5,6 +5,8 @@ from CustomClasses import AlbumInformation, SongInformation, MusicalInformation,
 import curses
 import json
 import os
+import time
+import random
 
 # Variables
 # Music
@@ -23,14 +25,14 @@ SongData: dict = {}
 # Constants
 WINDOW_SIZE: Vector = Vector(100, 40)
 
-LOG_PATH: str = "/home/User/.cache/badNam3/"
+LOG_PATH: str = f"/home/{os.getlogin()}/.cache/badNam3/"
 LOG_FILENAME: str = "Log.txt"
 
-CONFIG_PATH: str = "/home/User/.config/badNam3/"
+CONFIG_PATH: str = f"/home/{os.getlogin()}/.config/badNam3/"
 CONFIG_FILENAME: str = "MusicPlayerConfig.json"
-CONFIG_DUMMY_DATA: dict = {"MusicDirectory": "/home/User/Music/test"}
+CONFIG_DUMMY_DATA: dict = {"MusicDirectory": f"/home/{os.getlogin()}/Music/test"}
 
-MUSIC_DATA_PATH: str = "/home/User/.cache/badNam3/"
+MUSIC_DATA_PATH: str = f"/home/{os.getlogin()}/.cache/badNam3/"
 MUSIC_DATA_FILENAME: str = "MusicData.json"
 MUSIC_DATA_DUMMY_DATA: dict = {}
 
@@ -51,8 +53,12 @@ def CreatePath(path: str) -> bool:
 
 
 def CreateFile(file: str):
-    f = open(file, "a")
-    f.close()
+    try:
+        f = open(file, "a")
+        f.close()
+    except FileNotFoundError:
+        f = open(file, "w")
+        f.close()
     # AddToLog(f"Attempted to create file {file}, returning True")
 
 
@@ -125,9 +131,8 @@ def ShowLog():
 
 
 # Adds new session to log txt file
-f = open(LOG_PATH + LOG_FILENAME, "a")
-f.write("\n>-----New Session-----<\n\n")
-f.close()
+AddToLog("\n>-----New Session-----<\n\n")
+AddToLog(f"Username: {os.getlogin()}")
 
 # Init
 StdScr = curses.initscr()
@@ -151,7 +156,7 @@ def GetConfig():
     global Config
 
     # Creating File
-    CreateFile(CONFIG_PATH + CONFIG_FILENAME)
+    AddToLog(CreateFile(CONFIG_PATH + CONFIG_FILENAME))
 
     # Checks if file is empty
     f = open(CONFIG_PATH + CONFIG_FILENAME)
@@ -175,7 +180,7 @@ def GetMusicData():
     global MusicData
 
     # Creating File
-    CreateFile(MUSIC_DATA_PATH + MUSIC_DATA_FILENAME)
+    AddToLog(CreateFile(MUSIC_DATA_PATH + MUSIC_DATA_FILENAME))
 
     # Checks if file is empty
     f = open(MUSIC_DATA_PATH + MUSIC_DATA_FILENAME)
@@ -196,6 +201,7 @@ def GetMusicData():
 
 def _ready():
     CreatePath(MUSIC_DATA_PATH)  # Creates Path
+    CreatePath(CONFIG_PATH)
     GetConfig()
     GetMusicData()
 
@@ -340,22 +346,29 @@ def _updateMusicData():
     # try to add meta date to the songs, albums, artists, so you can rename and move songs
 
 
-def _ElementHandler():
-    pass
-
-
 def _drawing():
-    pass
+    StdScr.clear()
+    StdScr.addstr(0, 0, "Press SPACE to play random song")
+    StdScr.refresh()
 
 
 def _inputHandler():
-    pass
+    if StdScr.getch() == 32:
+        randomSong: SongInformation
+        randomSong = random.choice(SongElements)
+
+        StdScr.addstr(1, 0, f"Song: {randomSong.Name}")
+        StdScr.addstr(2, 0, f"By: {randomSong.Artist.Name}")
+        StdScr.addstr(3, 0, f"From: {randomSong.Album.Name}")
+
+    StdScr.refresh()
 
 
 # Running Main Funtions
 
 _ready()
 _updateMusicData()
-_ElementHandler()
 _drawing()
-_inputHandler()
+while True:
+    _inputHandler()
+    time.sleep(1 / 24)
